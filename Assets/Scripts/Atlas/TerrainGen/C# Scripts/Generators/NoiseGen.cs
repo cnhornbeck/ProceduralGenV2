@@ -48,25 +48,41 @@ public struct NoiseGenJob : IJobParallelFor
 
     private readonly float GenerateNoise(float x, float z)
     {
-        float total = 0;
-        float frequency = 1;
-        float amplitude = 1;
+        float heightMap = 0;
+        float temperatureMap = 0;
+
+        float frequencyHeight = 1;
+        float frequencyTemperature = 1;
+
+        float amplitudeHeight = 1;
+        float amplitudeTemperature = 1;
+
         float maxValue = 0; // Used for normalizing result to 0.0 - 1.0
-        Unity.Mathematics.Random random = new((uint)seed);
+        Random random = new((uint)seed);
 
         for (int i = 0; i < octaves; i++)
         {
-            float randomValue = 1000 * ((random.NextFloat() * 2) - 1);
+            float randomValueHeight = 1000 * ((random.NextFloat() * 2) - 1);
+            float randomValueTemperature = 1000 * ((random.NextFloat() * 2) - 1);
 
-            total += noise.snoise(new float2((x + randomValue) * frequency * scale, (z + randomValue) * frequency * scale)) * amplitude;
+            heightMap += noise.snoise(new float2((x + randomValueHeight) * frequencyHeight * scale, (z + randomValueHeight) * frequencyHeight * scale)) * amplitudeHeight;
+            temperatureMap += noise.snoise(new float2((x + randomValueTemperature) * frequencyTemperature * scale * 0.15f, (z + randomValueTemperature) * frequencyTemperature * scale * 0.15f)) * amplitudeTemperature;
 
-            maxValue += amplitude;
+            maxValue += amplitudeHeight;
 
-            amplitude *= persistence;
-            frequency *= lacunarity;
+            amplitudeHeight *= persistence;
+            amplitudeTemperature *= 0.1f;
+
+            frequencyHeight *= lacunarity;
+            frequencyTemperature *= 5f;
         }
 
-        return total / maxValue;
+        // temperatureMap = 1f / (1f + math.exp(-15f * (temperatureMap - 0.5f)));
+
+        float temperatureOffset = 1f / (1f + math.exp(20f * (temperatureMap - 0.5f))) + 0.2f;
+        float blendedHeight = heightMap * temperatureOffset;
+        maxValue *= 1.2f;
+        return blendedHeight / maxValue;
     }
 }
 
